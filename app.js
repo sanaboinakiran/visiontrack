@@ -206,6 +206,7 @@ function openProjectModal(id) {
   document.getElementById("project-error").style.display = "none";
   const backdrop = document.getElementById("project-modal-backdrop");
   const del = document.getElementById("delete-project-btn");
+  const updatesSection = document.getElementById("project-updates-section");
   if (id) {
     const p = projects.find((x) => x.id === id);
     document.getElementById("project-modal-title").textContent = "Edit project";
@@ -213,18 +214,64 @@ function openProjectModal(id) {
     document.getElementById("project-desc").value = p.description || "";
     document.getElementById("project-status").value = p.status;
     del.classList.remove("hidden");
+    updatesSection.classList.remove("hidden");
+    loadProjectUpdates(id);
   } else {
     document.getElementById("project-modal-title").textContent = "New project";
     document.getElementById("project-name").value = "";
     document.getElementById("project-desc").value = "";
     document.getElementById("project-status").value = "active";
     del.classList.add("hidden");
+    updatesSection.classList.add("hidden");
   }
   backdrop.classList.remove("hidden");
 }
 function closeProjectModal() {
   document.getElementById("project-modal-backdrop").classList.add("hidden");
 }
+
+// ── Daily updates (shared helper + project-scoped wiring) ───────────
+function renderUpdatesList(el, updates) {
+  el.innerHTML = "";
+  if (!updates.length) {
+    el.innerHTML = '<div class="updates-empty">No updates logged yet.</div>';
+    return;
+  }
+  updates.forEach((u) => {
+    const item = document.createElement("div");
+    item.className = "update-item";
+    const when = new Date(u.created_at).toLocaleString(undefined, {
+      month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
+    });
+    item.innerHTML = `<div class="meta">${when}</div><div class="note">${escapeHtml(u.note)}</div>`;
+    el.appendChild(item);
+  });
+}
+
+async function loadProjectUpdates(projectId) {
+  const listEl = document.getElementById("project-updates-list");
+  const { data, error } = await supabase
+    .from("updates")
+    .select("*")
+    .eq("project_id", projectId)
+    .order("created_at", { ascending: false });
+  if (error) { console.error(error); return; }
+  renderUpdatesList(listEl, data || []);
+}
+
+document.getElementById("project-update-post-btn").addEventListener("click", async () => {
+  const noteEl = document.getElementById("project-update-note");
+  const note = noteEl.value.trim();
+  if (!note || !editingProjectId) return;
+  const { error } = await supabase.from("updates").insert({
+    note,
+    project_id: editingProjectId,
+    owner_id: currentUser.id,
+  });
+  if (error) { alert(error.message); return; }
+  noteEl.value = "";
+  await loadProjectUpdates(editingProjectId);
+});
 
 document.getElementById("project-save-btn").addEventListener("click", async () => {
   const name = document.getElementById("project-name").value.trim();
@@ -331,6 +378,7 @@ function openTaskModal(id) {
   document.getElementById("task-file").value = "";
   document.getElementById("task-due").value = "";
   const del = document.getElementById("delete-task-btn");
+  const updatesSection = document.getElementById("task-updates-section");
   if (id) {
     const t = tasks.find((x) => x.id === id);
     document.getElementById("task-modal-title").textContent = "Edit task";
@@ -344,6 +392,8 @@ function openTaskModal(id) {
         `Current: <a href="${t.attachment_url}" target="_blank" rel="noopener">${escapeHtml(t.attachment_name || "attachment")}</a>`;
     }
     del.classList.remove("hidden");
+    updatesSection.classList.remove("hidden");
+    loadTaskUpdates(id);
   } else {
     document.getElementById("task-modal-title").textContent = "New task";
     document.getElementById("task-title").value = "";
@@ -351,12 +401,38 @@ function openTaskModal(id) {
     document.getElementById("task-status").value = "backlog";
     document.getElementById("task-priority").value = "medium";
     del.classList.add("hidden");
+    updatesSection.classList.add("hidden");
   }
   document.getElementById("task-modal-backdrop").classList.remove("hidden");
 }
 function closeTaskModal() {
   document.getElementById("task-modal-backdrop").classList.add("hidden");
 }
+
+async function loadTaskUpdates(taskId) {
+  const listEl = document.getElementById("task-updates-list");
+  const { data, error } = await supabase
+    .from("updates")
+    .select("*")
+    .eq("task_id", taskId)
+    .order("created_at", { ascending: false });
+  if (error) { console.error(error); return; }
+  renderUpdatesList(listEl, data || []);
+}
+
+document.getElementById("task-update-post-btn").addEventListener("click", async () => {
+  const noteEl = document.getElementById("task-update-note");
+  const note = noteEl.value.trim();
+  if (!note || !editingTaskId) return;
+  const { error } = await supabase.from("updates").insert({
+    note,
+    task_id: editingTaskId,
+    owner_id: currentUser.id,
+  });
+  if (error) { alert(error.message); return; }
+  noteEl.value = "";
+  await loadTaskUpdates(editingTaskId);
+});
 
 document.getElementById("task-save-btn").addEventListener("click", async () => {
   const title = document.getElementById("task-title").value.trim();

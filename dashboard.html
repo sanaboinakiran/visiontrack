@@ -115,6 +115,16 @@
         <option value="completed">Completed</option>
       </select>
     </div>
+
+    <div id="project-updates-section" class="hidden">
+      <div class="updates-header">Daily updates</div>
+      <div class="updates-list" id="project-updates-list"></div>
+      <div class="update-composer">
+        <textarea id="project-update-note" placeholder="What happened today on this project?"></textarea>
+        <button type="button" id="project-update-post-btn">Post update</button>
+      </div>
+    </div>
+
     <div class="modal-actions">
       <button class="danger ghost hidden" id="delete-project-btn">Delete project</button>
       <div class="right">
@@ -165,6 +175,16 @@
       <input id="task-file" type="file" />
       <div id="existing-attachment" style="margin-top:8px; font-size:13px;"></div>
     </div>
+
+    <div id="task-updates-section" class="hidden">
+      <div class="updates-header">Daily updates</div>
+      <div class="updates-list" id="task-updates-list"></div>
+      <div class="update-composer">
+        <textarea id="task-update-note" placeholder="What happened today on this task?"></textarea>
+        <button type="button" id="task-update-post-btn">Post update</button>
+      </div>
+    </div>
+
     <div class="modal-actions">
       <button class="danger ghost hidden" id="delete-task-btn">Delete task</button>
       <div class="right">

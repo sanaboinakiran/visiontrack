@@ -385,6 +385,54 @@ label {
 
 .hidden { display: none !important; }
 
+/* ── Daily updates feed (in project/task modals) ────────────────── */
+.updates-header {
+  font-size: 13px;
+  color: var(--text-dim);
+  margin: 20px 0 10px;
+  padding-top: 16px;
+  border-top: 1px solid var(--hairline);
+}
+.updates-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 220px;
+  overflow-y: auto;
+  margin-bottom: 12px;
+}
+.update-item {
+  background: var(--bg);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+}
+.update-item .meta {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-faint);
+  margin-bottom: 4px;
+}
+.update-item .note {
+  font-size: 13px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.update-composer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.update-composer textarea { min-height: 56px; }
+.update-composer button {
+  align-self: flex-end;
+}
+.updates-empty {
+  color: var(--text-faint);
+  font-size: 13px;
+  padding: 8px 0;
+}
+
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-thumb { background: var(--hairline); border-radius: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
