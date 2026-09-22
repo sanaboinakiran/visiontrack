@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Vision Track — Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<div class="app-shell">
+  <aside class="rail">
+    <div class="rail-header">
+      <div class="wordmark"><span class="dot"></span> Vision Track</div>
+    </div>
+    <div class="rail-projects" id="project-list">
+      <!-- populated by app.js -->
+    </div>
+    <div style="padding: 10px 16px;">
+      <button id="new-project-btn" style="width:100%;">+ New project</button>
+    </div>
+    <div class="rail-footer">
+      <span id="user-email" style="font-family: var(--mono); font-size:12px; color: var(--text-faint);"></span>
+      <button class="ghost" id="signout-btn">Sign out</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1 id="project-title">Select a project</h1>
+        <div class="project-meta" id="project-meta"></div>
+      </div>
+      <button class="primary" id="new-task-btn" disabled>+ New task</button>
+    </div>
+
+    <div class="board" id="board">
+      <div class="column" data-status="backlog">
+        <div class="column-header"><span>Backlog</span><span class="count" id="count-backlog">0</span></div>
+        <div class="column-cards" id="col-backlog"></div>
+      </div>
+      <div class="column" data-status="in_progress">
+        <div class="column-header"><span>In progress</span><span class="count" id="count-in_progress">0</span></div>
+        <div class="column-cards" id="col-in_progress"></div>
+      </div>
+      <div class="column" data-status="done">
+        <div class="column-header"><span>Done</span><span class="count" id="count-done">0</span></div>
+        <div class="column-cards" id="col-done"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Project modal -->
+<div class="modal-backdrop hidden" id="project-modal-backdrop">
+  <div class="modal">
+    <h3 id="project-modal-title">New project</h3>
+    <div class="auth-error" id="project-error"></div>
+    <div class="field">
+      <label for="project-name">Name</label>
+      <input id="project-name" type="text" placeholder="e.g. Site migration" />
+    </div>
+    <div class="field">
+      <label for="project-desc">Description</label>
+      <textarea id="project-desc" placeholder="What is this project for?"></textarea>
+    </div>
+    <div class="field">
+      <label for="project-status">Status</label>
+      <select id="project-status">
+        <option value="active">Active</option>
+        <option value="on_hold">On hold</option>
+        <option value="completed">Completed</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="danger ghost hidden" id="delete-project-btn">Delete project</button>
+      <div class="right">
+        <button class="ghost" id="project-cancel-btn">Cancel</button>
+        <button class="primary" id="project-save-btn">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Task modal -->
+<div class="modal-backdrop hidden" id="task-modal-backdrop">
+  <div class="modal">
+    <h3 id="task-modal-title">New task</h3>
+    <div class="auth-error" id="task-error"></div>
+    <div class="field">
+      <label for="task-title">Title</label>
+      <input id="task-title" type="text" placeholder="e.g. Migrate DNS records" />
+    </div>
+    <div class="field">
+      <label for="task-detail">Detail</label>
+      <textarea id="task-detail" placeholder="Notes, steps, context..."></textarea>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+      <div class="field">
+        <label for="task-status">Status</label>
+        <select id="task-status">
+          <option value="backlog">Backlog</option>
+          <option value="in_progress">In progress</option>
+          <option value="done">Done</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="task-priority">Priority</label>
+        <select id="task-priority">
+          <option value="low">Low</option>
+          <option value="medium" selected>Medium</option>
+          <option value="high">High</option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label for="task-file">Attachment (stored on GitHub)</label>
+      <input id="task-file" type="file" />
+      <div id="existing-attachment" style="margin-top:8px; font-size:13px;"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="danger ghost hidden" id="delete-task-btn">Delete task</button>
+      <div class="right">
+        <button class="ghost" id="task-cancel-btn">Cancel</button>
+        <button class="primary" id="task-save-btn">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Vision Track</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<div class="auth-wrap">
+  <div class="auth-context">
+    <div class="wordmark"><span class="dot"></span> Vision Track</div>
+
+    <div>
+      <h1 id="auth-headline">Track the work. See the whole operation.</h1>
+      <p class="meta" style="margin-top:14px;">Projects, tasks and status in one board.</p>
+    </div>
+
+    <div class="auth-status-rows">
+      <div class="row"><span><span class="status-dot on"></span>Database</span><span>Supabase</span></div>
+      <div class="row"><span><span class="status-dot on"></span>Attachments</span><span>GitHub</span></div>
+      <div class="row"><span><span class="status-dot mid"></span>Hosting</span><span>Render</span></div>
+    </div>
+  </div>
+
+  <div class="auth-form-side">
+    <form class="auth-form" id="auth-form">
+      <h2 id="form-title">Sign in</h2>
+      <p class="sub" id="form-sub">Enter your credentials to open your board.</p>
+
+      <div class="auth-error" id="auth-error"></div>
+
+      <div class="field">
+        <label for="email">Email</label>
+        <input id="email" type="email" required autocomplete="email" />
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input id="password" type="password" required autocomplete="current-password" minlength="6" />
+      </div>
+
+      <button type="submit" class="primary" style="width:100%;" id="submit-btn">Sign in</button>
+
+      <p class="switch-mode">
+        <span id="switch-prompt">No account yet?</span>
+        <button type="button" id="switch-btn">Create one</button>
+      </p>
+    </form>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script>
+  const cfg = window.VISIONTRACK_CONFIG;
+  const supabase = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
+
+  let mode = "signin"; // or "signup"
+  const form = document.getElementById("auth-form");
+  const errorBox = document.getElementById("auth-error");
+  const submitBtn = document.getElementById("submit-btn");
+  const switchBtn = document.getElementById("switch-btn");
+  const switchPrompt = document.getElementById("switch-prompt");
+  const formTitle = document.getElementById("form-title");
+  const formSub = document.getElementById("form-sub");
+
+  function showError(msg) {
+    errorBox.textContent = msg;
+    errorBox.style.display = "block";
+  }
+  function clearError() {
+    errorBox.style.display = "none";
+  }
+
+  switchBtn.addEventListener("click", () => {
+    clearError();
+    mode = mode === "signin" ? "signup" : "signin";
+    if (mode === "signup") {
+      formTitle.textContent = "Create an account";
+      formSub.textContent = "Set a password to start your board.";
+      submitBtn.textContent = "Create account";
+      switchPrompt.textContent = "Already have an account?";
+      switchBtn.textContent = "Sign in";
+    } else {
+      formTitle.textContent = "Sign in";
+      formSub.textContent = "Enter your credentials to open your board.";
+      submitBtn.textContent = "Sign in";
+      switchPrompt.textContent = "No account yet?";
+      switchBtn.textContent = "Create one";
+    }
+  });
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    clearError();
+    submitBtn.disabled = true;
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value;
+
+    try {
+      if (mode === "signup") {
+        const { error } = await supabase.auth.signUp({ email, password });
+        if (error) throw error;
+        showError("Account created. Check your email if confirmation is required, then sign in.");
+        submitBtn.disabled = false;
+        return;
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        window.location.href = "dashboard.html";
+      }
+    } catch (err) {
+      showError(err.message || "Something went wrong.");
+      submitBtn.disabled = false;
+    }
+  });
+
+  // If already signed in, skip straight to the dashboard.
+  supabase.auth.getSession().then(({ data }) => {
+    if (data.session) window.location.href = "dashboard.html";
+  });
+</script>
+</body>
+</html>
