@@ -1,3 +1,4 @@
+(function () {
 const cfg = window.VISIONTRACK_CONFIG;
 const supabase = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
 
@@ -341,3 +342,4 @@ function escapeHtml(str) {
 }
 
 guardAndInit();
+})();
