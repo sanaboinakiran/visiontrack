@@ -8,6 +8,7 @@ let activeProjectId = null;
 let tasks = [];
 let editingTaskId = null; // null = creating
 let editingProjectId = null; // null = creating
+let viewMode = "overview"; // "overview" | "board"
 
 // ── Auth guard ─────────────────────────────────────────────────────
 async function guardAndInit() {
@@ -35,7 +36,9 @@ async function loadProjects() {
   if (error) { console.error(error); return; }
   projects = data || [];
   renderProjectList();
-  if (!activeProjectId && projects.length) {
+  if (viewMode === "overview") {
+    await showOverview();
+  } else if (!activeProjectId && projects.length) {
     selectProject(projects[0].id);
   } else if (!projects.length) {
     document.getElementById("new-task-btn").disabled = true;
@@ -43,6 +46,8 @@ async function loadProjects() {
 }
 
 function renderProjectList() {
+  const dashNav = document.getElementById("nav-dashboard");
+  dashNav.classList.toggle("active", viewMode === "overview");
   const el = document.getElementById("project-list");
   el.innerHTML = "";
   projects.forEach((p) => {
@@ -59,6 +64,8 @@ function statusAbbrev(s) {
 }
 
 async function selectProject(id) {
+  viewMode = "board";
+  showBoardUI();
   activeProjectId = id;
   renderProjectList();
   const project = projects.find((p) => p.id === id);
@@ -70,7 +77,125 @@ async function selectProject(id) {
   await loadTasks();
 }
 
-document.getElementById("new-project-btn").addEventListener("click", () => openProjectModal(null));
+document.getElementById("nav-dashboard").addEventListener("click", () => {
+  viewMode = "overview";
+  activeProjectId = null;
+  renderProjectList();
+  showOverview();
+});
+
+function showBoardUI() {
+  document.getElementById("overview-view").classList.add("hidden");
+  document.getElementById("board").classList.remove("hidden");
+}
+
+function showOverviewUI() {
+  document.getElementById("board").classList.add("hidden");
+  document.getElementById("overview-view").classList.remove("hidden");
+}
+
+async function showOverview() {
+  viewMode = "overview";
+  showOverviewUI();
+  document.getElementById("project-title").textContent = "Dashboard";
+  document.getElementById("project-meta").textContent = "A quick look at how work is progressing.";
+  document.getElementById("new-task-btn").disabled = true;
+
+  const { data, error } = await supabase.from("tasks").select("*");
+  if (error) { console.error(error); return; }
+  const allTasks = data || [];
+
+  const today = new Date().toISOString().slice(0, 10);
+  const total = allTasks.length;
+  const completedToday = allTasks.filter(
+    (t) => t.completed_at && t.completed_at.slice(0, 10) === today
+  ).length;
+  const pending = allTasks.filter((t) => t.status !== "done").length;
+  const overdue = allTasks.filter(
+    (t) => t.due_date && t.due_date < today && t.status !== "done"
+  ).length;
+
+  document.getElementById("stat-total").textContent = total;
+  document.getElementById("stat-completed-today").textContent = completedToday;
+  document.getElementById("stat-pending").textContent = pending;
+  document.getElementById("stat-overdue").textContent = overdue;
+
+  renderStatusDonut(allTasks);
+  renderPriorityBars(allTasks);
+}
+
+function renderStatusDonut(allTasks) {
+  const groups = [
+    { key: "backlog", label: "Backlog", color: "var(--text-faint)" },
+    { key: "in_progress", label: "In progress", color: "var(--accent)" },
+    { key: "done", label: "Done", color: "var(--success)" },
+  ];
+  const counts = groups.map((g) => allTasks.filter((t) => t.status === g.key).length);
+  const total = counts.reduce((a, b) => a + b, 0);
+
+  const svg = document.getElementById("status-donut");
+  const legend = document.getElementById("status-legend");
+  svg.innerHTML = "";
+  legend.innerHTML = "";
+
+  if (!total) {
+    legend.innerHTML = '<span style="color:var(--text-faint);">No tasks yet.</span>';
+    return;
+  }
+
+  const r = 50, cx = 60, cy = 60, circumference = 2 * Math.PI * r;
+  let offset = 0;
+  groups.forEach((g, i) => {
+    const value = counts[i];
+    if (!value) return;
+    const frac = value / total;
+    const dash = frac * circumference;
+    const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    circle.setAttribute("cx", cx);
+    circle.setAttribute("cy", cy);
+    circle.setAttribute("r", r);
+    circle.setAttribute("fill", "none");
+    circle.setAttribute("stroke", g.color.startsWith("var") ? getComputedStyle(document.documentElement).getPropertyValue(g.color.slice(4, -1)) : g.color);
+    circle.setAttribute("stroke-width", "18");
+    circle.setAttribute("stroke-dasharray", `${dash} ${circumference - dash}`);
+    circle.setAttribute("stroke-dashoffset", -offset);
+    circle.setAttribute("transform", `rotate(-90 ${cx} ${cy})`);
+    svg.appendChild(circle);
+    offset += dash;
+
+    const row = document.createElement("div");
+    row.className = "item";
+    row.innerHTML = `<span class="swatch" style="background:${g.color};"></span><span>${g.label}</span><span class="n">${value}</span>`;
+    legend.appendChild(row);
+  });
+}
+
+function renderPriorityBars(allTasks) {
+  const groups = [
+    { key: "low", label: "Low", color: "var(--text-faint)" },
+    { key: "medium", label: "Medium", color: "var(--warning)" },
+    { key: "high", label: "High", color: "var(--danger)" },
+  ];
+  const counts = groups.map((g) => allTasks.filter((t) => t.priority === g.key).length);
+  const max = Math.max(1, ...counts);
+
+  const wrap = document.getElementById("priority-bars");
+  wrap.innerHTML = "";
+  groups.forEach((g, i) => {
+    const value = counts[i];
+    const heightPct = Math.round((value / max) * 100);
+    const col = document.createElement("div");
+    col.className = "bar-col";
+    col.innerHTML = `
+      <span class="n">${value}</span>
+      <div class="bar" style="height:${heightPct}%; background:${g.color};"></div>
+      <span class="label">${g.label}</span>
+    `;
+    wrap.appendChild(col);
+  });
+}
+
+
 document.getElementById("project-cancel-btn").addEventListener("click", closeProjectModal);
 document.getElementById("project-title").addEventListener("dblclick", () => {
   if (activeProjectId) openProjectModal(activeProjectId);
@@ -179,12 +304,17 @@ function renderBoard() {
 function taskCard(t) {
   const card = document.createElement("div");
   card.className = "task-card";
+  const today = new Date().toISOString().slice(0, 10);
+  const isOverdue = t.due_date && t.due_date < today && t.status !== "done";
   card.innerHTML = `
     <div class="id">TASK-${t.id.slice(0, 8)}</div>
     <div class="title">${escapeHtml(t.title)}</div>
     <div class="row">
       <span class="priority-pill ${t.priority}">${t.priority}</span>
-      ${t.attachment_url ? '<span class="attach-flag">📎</span>' : ""}
+      <span>
+        ${isOverdue ? '<span class="priority-pill high" style="margin-right:6px;">overdue</span>' : ""}
+        ${t.attachment_url ? '<span class="attach-flag">📎</span>' : ""}
+      </span>
     </div>
   `;
   card.addEventListener("click", () => openTaskModal(t.id));
@@ -199,6 +329,7 @@ function openTaskModal(id) {
   document.getElementById("task-error").style.display = "none";
   document.getElementById("existing-attachment").textContent = "";
   document.getElementById("task-file").value = "";
+  document.getElementById("task-due").value = "";
   const del = document.getElementById("delete-task-btn");
   if (id) {
     const t = tasks.find((x) => x.id === id);
@@ -207,6 +338,7 @@ function openTaskModal(id) {
     document.getElementById("task-detail").value = t.detail || "";
     document.getElementById("task-status").value = t.status;
     document.getElementById("task-priority").value = t.priority;
+    document.getElementById("task-due").value = t.due_date || "";
     if (t.attachment_url) {
       document.getElementById("existing-attachment").innerHTML =
         `Current: <a href="${t.attachment_url}" target="_blank" rel="noopener">${escapeHtml(t.attachment_name || "attachment")}</a>`;
@@ -231,6 +363,7 @@ document.getElementById("task-save-btn").addEventListener("click", async () => {
   const detail = document.getElementById("task-detail").value.trim();
   const status = document.getElementById("task-status").value;
   const priority = document.getElementById("task-priority").value;
+  const due_date = document.getElementById("task-due").value || null;
   const fileInput = document.getElementById("task-file");
   const errBox = document.getElementById("task-error");
   const saveBtn = document.getElementById("task-save-btn");
@@ -252,10 +385,17 @@ document.getElementById("task-save-btn").addEventListener("click", async () => {
       attachment_name = uploaded.name;
     }
 
-    const payload = { title, detail, status, priority };
+    const payload = { title, detail, status, priority, due_date };
     if (attachment_url) {
       payload.attachment_url = attachment_url;
       payload.attachment_name = attachment_name;
+    }
+
+    if (status === "done") {
+      const existing = editingTaskId ? tasks.find((x) => x.id === editingTaskId) : null;
+      payload.completed_at = existing && existing.completed_at ? existing.completed_at : new Date().toISOString();
+    } else {
+      payload.completed_at = null;
     }
 
     if (editingTaskId) {

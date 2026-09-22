@@ -15,6 +15,12 @@
     <div class="rail-header">
       <div class="wordmark"><span class="dot"></span> Vision Track</div>
     </div>
+    <div style="padding: 10px 8px 0;">
+      <div class="rail-item" id="nav-dashboard">
+        <span>Dashboard</span>
+      </div>
+    </div>
+    <div style="padding: 14px 16px 4px; font-size:12px; color: var(--text-faint);">Workspace</div>
     <div class="rail-projects" id="project-list">
       <!-- populated by app.js -->
     </div>
@@ -34,6 +40,41 @@
         <div class="project-meta" id="project-meta"></div>
       </div>
       <button class="primary" id="new-task-btn" disabled>+ New task</button>
+    </div>
+
+    <div class="overview hidden" id="overview-view">
+      <div class="stat-grid">
+        <div class="stat-card">
+          <span>Total tasks</span>
+          <div class="stat-value" id="stat-total">0</div>
+        </div>
+        <div class="stat-card">
+          <span>Completed today</span>
+          <div class="stat-value" id="stat-completed-today">0</div>
+        </div>
+        <div class="stat-card">
+          <span>Pending</span>
+          <div class="stat-value" id="stat-pending">0</div>
+        </div>
+        <div class="stat-card">
+          <span>Overdue</span>
+          <div class="stat-value" id="stat-overdue">0</div>
+        </div>
+      </div>
+
+      <div class="chart-grid">
+        <div class="chart-panel">
+          <h3>Tasks by status</h3>
+          <div class="donut-wrap">
+            <svg viewBox="0 0 120 120" width="150" height="150" id="status-donut"></svg>
+            <div class="donut-legend" id="status-legend"></div>
+          </div>
+        </div>
+        <div class="chart-panel">
+          <h3>Tasks by priority</h3>
+          <div class="bar-chart" id="priority-bars"></div>
+        </div>
+      </div>
     </div>
 
     <div class="board" id="board">
@@ -114,6 +155,10 @@
           <option value="high">High</option>
         </select>
       </div>
+    </div>
+    <div class="field">
+      <label for="task-due">Due date (optional)</label>
+      <input id="task-due" type="date" />
     </div>
     <div class="field">
       <label for="task-file">Attachment (stored on GitHub)</label>

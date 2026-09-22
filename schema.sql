@@ -22,6 +22,8 @@ create table if not exists public.tasks (
   priority text not null default 'medium' check (priority in ('low','medium','high')),
   attachment_url text,
   attachment_name text,
+  due_date date,
+  completed_at timestamptz,
   created_at timestamptz not null default now()
 );
 
