@@ -198,6 +198,7 @@ label {
   cursor: pointer;
   font-size: 14px;
   margin-bottom: 2px;
+  text-decoration: none;
 }
 .rail-item:hover { background: var(--panel-raised); }
 .rail-item.active { background: var(--panel-raised); color: var(--text); }
@@ -444,3 +445,76 @@ label {
   .rail { display: none; }
   .board { grid-template-columns: 1fr; }
 }
+
+/* ── Generic standalone page layout ─────────────────────────────── */
+.page-wrap { padding: 24px; overflow-y: auto; flex: 1; }
+.page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; gap: 16px; flex-wrap: wrap; }
+.page-header h1 { margin: 0 0 6px; font-size: 22px; }
+.page-header p { margin: 0; color: var(--text-dim); font-size: 14px; }
+
+.filters-row { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+.filters-row input[type="text"], .filters-row input[type="search"] { flex: 1; min-width: 220px; }
+.filters-row select { width: auto; min-width: 140px; }
+
+/* ── Task list rows (My Tasks) ──────────────────────────────────── */
+.task-list { display: flex; flex-direction: column; gap: 10px; }
+.task-row {
+  background: var(--panel);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.task-row .main { flex: 1; min-width: 200px; }
+.task-row .title-line { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; flex-wrap: wrap; }
+.task-row .title-line .title { font-size: 15px; font-weight: 500; }
+.task-row .meta-line { display: flex; gap: 14px; font-size: 12px; color: var(--text-faint); font-family: var(--mono); flex-wrap: wrap; }
+.task-row .actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.task-row select.status-select { width: auto; min-width: 130px; font-size: 13px; padding: 6px 9px; }
+.task-row .meta-line .overdue-flag { color: var(--danger); }
+
+/* ── Data tables (Sites / Trackers) ─────────────────────────────── */
+.data-table { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--hairline); border-radius: var(--radius); overflow: hidden; }
+.data-table th, .data-table td { padding: 10px 14px; text-align: left; font-size: 13px; border-bottom: 1px solid var(--hairline); }
+.data-table th { color: var(--text-dim); font-weight: 500; background: var(--panel-raised); font-size: 12px; }
+.data-table tbody tr:last-child td { border-bottom: none; }
+.data-table tbody tr:hover td { background: rgba(255,255,255,0.02); }
+.data-table tbody tr { cursor: pointer; }
+.status-tag { font-family: var(--mono); font-size: 11px; padding: 2px 7px; border-radius: 3px; border: 1px solid var(--hairline); color: var(--text-dim); }
+.status-tag.installed, .status-tag.active { color: var(--success); border-color: var(--success); }
+.status-tag.faulty { color: var(--danger); border-color: var(--danger); }
+.status-tag.removed { color: var(--text-faint); }
+
+/* ── Daily To-Do checklist ───────────────────────────────────────── */
+.todo-add-row { display: flex; gap: 10px; margin-bottom: 16px; }
+.todo-add-row input { flex: 1; }
+.todo-list { display: flex; flex-direction: column; gap: 8px; }
+.todo-item { display: flex; align-items: center; gap: 12px; background: var(--panel); border: 1px solid var(--hairline); border-radius: var(--radius); padding: 10px 14px; }
+.todo-item input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent); flex-shrink: 0; }
+.todo-item .text { flex: 1; font-size: 14px; }
+.todo-item.done .text { color: var(--text-faint); text-decoration: line-through; }
+.todo-item .del-btn { color: var(--text-faint); background: none; border: none; padding: 2px 6px; }
+.todo-item .del-btn:hover { color: var(--danger); }
+.day-nav { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.day-nav .day-label { font-family: var(--mono); font-size: 13px; color: var(--text-dim); min-width: 160px; text-align: center; }
+
+/* ── Calendar ────────────────────────────────────────────────────── */
+.cal-nav { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.cal-nav h2 { margin: 0; font-size: 16px; min-width: 170px; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: var(--hairline); border: 1px solid var(--hairline); border-radius: var(--radius); overflow: hidden; }
+.cal-dow { background: var(--panel-raised); padding: 8px; text-align: center; font-size: 11px; color: var(--text-faint); font-family: var(--mono); }
+.cal-cell { background: var(--bg); min-height: 92px; padding: 6px; font-size: 12px; color: var(--text-faint); }
+.cal-cell.other-month { opacity: 0.35; }
+.cal-cell .daynum { font-family: var(--mono); font-size: 11px; margin-bottom: 4px; }
+.cal-cell.today .daynum { color: var(--accent); font-weight: 600; }
+.cal-task-pill { display: block; background: var(--panel-raised); border: 1px solid var(--hairline); border-radius: 3px; padding: 2px 5px; margin-bottom: 2px; font-size: 11px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+.cal-task-pill.overdue { border-color: var(--danger); color: var(--danger); }
+
+/* ── Reports ─────────────────────────────────────────────────────── */
+.report-table-wrap { margin-bottom: 24px; }
+.progress-track { background: var(--bg); border: 1px solid var(--hairline); border-radius: 3px; height: 6px; overflow: hidden; width: 100px; }
+.progress-fill { background: var(--accent); height: 100%; }

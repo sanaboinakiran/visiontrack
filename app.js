@@ -19,7 +19,20 @@ async function guardAndInit() {
   }
   currentUser = data.session.user;
   document.getElementById("user-email").textContent = currentUser.email;
+
+  const params = new URLSearchParams(window.location.search);
+  const deepProjectId = params.get("project");
+  const deepTaskId = params.get("task");
+  const wantsNewProject = params.get("new") === "project";
+
+  if (deepProjectId) { viewMode = "board"; activeProjectId = deepProjectId; }
   await loadProjects();
+
+  if (deepProjectId) {
+    await selectProject(deepProjectId);
+    if (deepTaskId) openTaskModal(deepTaskId);
+  }
+  if (wantsNewProject) openProjectModal(null);
 }
 
 document.getElementById("signout-btn").addEventListener("click", async () => {

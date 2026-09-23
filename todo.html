@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Vision Track — Daily To-Do</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<div class="app-shell">
+  <aside class="rail">
+    <div class="rail-header">
+      <div class="wordmark"><span class="dot"></span> Vision Track</div>
+    </div>
+    <div style="padding: 10px 8px 0;">
+      <a href="dashboard.html" class="rail-item"><span>Dashboard</span></a>
+      <a href="mytasks.html" class="rail-item"><span>My Tasks</span></a>
+      <a href="todo.html" class="rail-item active"><span>Daily To-Do</span></a>
+      <a href="projects.html" class="rail-item"><span>Projects</span></a>
+      <a href="trackers.html" class="rail-item"><span>Project Trackers</span></a>
+      <a href="sites.html" class="rail-item"><span>Sites</span></a>
+      <a href="calendar.html" class="rail-item"><span>Calendar</span></a>
+      <a href="reports.html" class="rail-item"><span>Reports</span></a>
+    </div>
+    <div style="padding: 14px 16px 4px; font-size:12px; color: var(--text-faint);">Workspace</div>
+    <div class="rail-projects" id="project-list"></div>
+    <div style="padding: 10px 16px;">
+      <a href="dashboard.html?new=project" style="display:block;"><button style="width:100%;">+ New project</button></a>
+    </div>
+    <div class="rail-footer">
+      <span id="user-email" style="font-family: var(--mono); font-size:12px; color: var(--text-faint);"></span>
+      <button class="ghost" id="signout-btn">Sign out</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="page-wrap" style="max-width:680px;">
+      <div class="page-header">
+        <div>
+          <h1>Daily To-Do</h1>
+          <p>A personal checklist, separate from project tasks.</p>
+        </div>
+      </div>
+
+      <div class="day-nav">
+        <button id="prev-day">← Prev</button>
+        <span class="day-label" id="day-label"></span>
+        <button id="next-day">Next →</button>
+        <button class="ghost" id="today-btn">Today</button>
+      </div>
+
+      <div class="todo-add-row">
+        <input type="text" id="todo-input" placeholder="Add something to do..." />
+        <button class="primary" id="todo-add-btn">Add</button>
+      </div>
+
+      <div class="todo-list" id="todo-list"></div>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="client.js"></script>
+<script src="shell.js"></script>
+<script>
+(async function () {
+  const user = await window.requireUser();
+  if (!user) return;
+  await initShell(user);
+
+  let currentDate = new Date();
+
+  function dateKey(d) {
+    return d.toISOString().slice(0, 10);
+  }
+  function formatLabel(d) {
+    const today = dateKey(new Date());
+    const key = dateKey(d);
+    if (key === today) return "Today · " + d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    return d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+  }
+
+  async function loadTodos() {
+    document.getElementById("day-label").textContent = formatLabel(currentDate);
+    const { data, error } = await window.sb
+      .from("daily_todos")
+      .select("*")
+      .eq("todo_date", dateKey(currentDate))
+      .order("created_at", { ascending: true });
+    if (error) { console.error(error); return; }
+    render(data || []);
+  }
+
+  function render(items) {
+    const listEl = document.getElementById("todo-list");
+    listEl.innerHTML = "";
+    if (!items.length) {
+      listEl.innerHTML = '<div class="empty-state">Nothing on the list for this day.</div>';
+      return;
+    }
+    items.forEach((item) => {
+      const row = document.createElement("div");
+      row.className = "todo-item" + (item.done ? " done" : "");
+      row.innerHTML = `
+        <input type="checkbox" ${item.done ? "checked" : ""} />
+        <span class="text">${window.escapeHtmlShared(item.title)}</span>
+        <button class="del-btn">✕</button>
+      `;
+      row.querySelector("input").addEventListener("change", async (e) => {
+        await window.sb.from("daily_todos").update({ done: e.target.checked }).eq("id", item.id);
+        await loadTodos();
+      });
+      row.querySelector(".del-btn").addEventListener("click", async () => {
+        await window.sb.from("daily_todos").delete().eq("id", item.id);
+        await loadTodos();
+      });
+      listEl.appendChild(row);
+    });
+  }
+
+  document.getElementById("todo-add-btn").addEventListener("click", async () => {
+    const input = document.getElementById("todo-input");
+    const title = input.value.trim();
+    if (!title) return;
+    const { error } = await window.sb.from("daily_todos").insert({
+      title,
+      owner_id: user.id,
+      todo_date: dateKey(currentDate),
+    });
+    if (error) { alert(error.message); return; }
+    input.value = "";
+    await loadTodos();
+  });
+  document.getElementById("todo-input").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") document.getElementById("todo-add-btn").click();
+  });
+
+  document.getElementById("prev-day").addEventListener("click", () => {
+    currentDate.setDate(currentDate.getDate() - 1);
+    loadTodos();
+  });
+  document.getElementById("next-day").addEventListener("click", () => {
+    currentDate.setDate(currentDate.getDate() + 1);
+    loadTodos();
+  });
+  document.getElementById("today-btn").addEventListener("click", () => {
+    currentDate = new Date();
+    loadTodos();
+  });
+
+  await loadTodos();
+})();
+</script>
+</body>
+</html>

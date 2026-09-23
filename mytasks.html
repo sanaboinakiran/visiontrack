@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Vision Track — My Tasks</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<div class="app-shell">
+  <aside class="rail">
+    <div class="rail-header">
+      <div class="wordmark"><span class="dot"></span> Vision Track</div>
+    </div>
+    <div style="padding: 10px 8px 0;">
+      <a href="dashboard.html" class="rail-item"><span>Dashboard</span></a>
+      <a href="mytasks.html" class="rail-item active"><span>My Tasks</span></a>
+      <a href="todo.html" class="rail-item"><span>Daily To-Do</span></a>
+      <a href="projects.html" class="rail-item"><span>Projects</span></a>
+      <a href="trackers.html" class="rail-item"><span>Project Trackers</span></a>
+      <a href="sites.html" class="rail-item"><span>Sites</span></a>
+      <a href="calendar.html" class="rail-item"><span>Calendar</span></a>
+      <a href="reports.html" class="rail-item"><span>Reports</span></a>
+    </div>
+    <div style="padding: 14px 16px 4px; font-size:12px; color: var(--text-faint);">Workspace</div>
+    <div class="rail-projects" id="project-list"></div>
+    <div style="padding: 10px 16px;">
+      <a href="dashboard.html?new=project" style="display:block;"><button style="width:100%;">+ New project</button></a>
+    </div>
+    <div class="rail-footer">
+      <span id="user-email" style="font-family: var(--mono); font-size:12px; color: var(--text-faint);"></span>
+      <button class="ghost" id="signout-btn">Sign out</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="page-wrap">
+      <div class="page-header">
+        <div>
+          <h1>My Tasks</h1>
+          <p>Every task across every project, searchable and filterable.</p>
+        </div>
+        <a href="dashboard.html"><button class="primary">+ New task</button></a>
+      </div>
+
+      <div class="filters-row">
+        <input type="text" id="search-input" placeholder="Search by title or detail..." />
+        <select id="status-filter">
+          <option value="">All statuses</option>
+          <option value="backlog">Backlog</option>
+          <option value="in_progress">In progress</option>
+          <option value="done">Done</option>
+        </select>
+        <select id="priority-filter">
+          <option value="">All priorities</option>
+          <option value="low">Low</option>
+          <option value="medium">Medium</option>
+          <option value="high">High</option>
+        </select>
+      </div>
+
+      <div class="task-list" id="task-list"></div>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="client.js"></script>
+<script src="shell.js"></script>
+<script>
+(async function () {
+  const user = await window.requireUser();
+  if (!user) return;
+  await initShell(user);
+
+  let allTasks = [];
+
+  async function loadTasks() {
+    const { data, error } = await window.sb
+      .from("tasks")
+      .select("*, projects(name)")
+      .order("created_at", { ascending: false });
+    if (error) { console.error(error); return; }
+    allTasks = data || [];
+    render();
+  }
+
+  function render() {
+    const q = document.getElementById("search-input").value.trim().toLowerCase();
+    const statusF = document.getElementById("status-filter").value;
+    const priorityF = document.getElementById("priority-filter").value;
+    const today = new Date().toISOString().slice(0, 10);
+
+    const filtered = allTasks.filter((t) => {
+      if (statusF && t.status !== statusF) return false;
+      if (priorityF && t.priority !== priorityF) return false;
+      if (q && !(t.title.toLowerCase().includes(q) || (t.detail || "").toLowerCase().includes(q))) return false;
+      return true;
+    });
+
+    const listEl = document.getElementById("task-list");
+    listEl.innerHTML = "";
+    if (!filtered.length) {
+      listEl.innerHTML = '<div class="empty-state">No tasks match.</div>';
+      return;
+    }
+
+    filtered.forEach((t) => {
+      const isOverdue = t.due_date && t.due_date < today && t.status !== "done";
+      const row = document.createElement("div");
+      row.className = "task-row";
+      row.innerHTML = `
+        <div class="main">
+          <div class="title-line">
+            <span class="title" style="cursor:pointer;">${window.escapeHtmlShared(t.title)}</span>
+            <span class="priority-pill ${t.priority}">${t.priority}</span>
+          </div>
+          <div class="meta-line">
+            ${t.projects ? `<span>${window.escapeHtmlShared(t.projects.name)}</span>` : ""}
+            ${t.due_date ? `<span class="${isOverdue ? "overdue-flag" : ""}">Due ${t.due_date}</span>` : ""}
+          </div>
+        </div>
+        <div class="actions">
+          <select class="status-select">
+            <option value="backlog" ${t.status === "backlog" ? "selected" : ""}>Backlog</option>
+            <option value="in_progress" ${t.status === "in_progress" ? "selected" : ""}>In progress</option>
+            <option value="done" ${t.status === "done" ? "selected" : ""}>Done</option>
+          </select>
+        </div>
+      `;
+      row.querySelector(".title").addEventListener("click", () => {
+        window.location.href = `dashboard.html?project=${t.project_id}&task=${t.id}`;
+      });
+      row.querySelector(".status-select").addEventListener("change", async (e) => {
+        const newStatus = e.target.value;
+        const payload = { status: newStatus };
+        payload.completed_at = newStatus === "done" ? (t.completed_at || new Date().toISOString()) : null;
+        const { error } = await window.sb.from("tasks").update(payload).eq("id", t.id);
+        if (error) { alert(error.message); return; }
+        await loadTasks();
+      });
+      listEl.appendChild(row);
+    });
+  }
+
+  document.getElementById("search-input").addEventListener("input", render);
+  document.getElementById("status-filter").addEventListener("change", render);
+  document.getElementById("priority-filter").addEventListener("change", render);
+
+  await loadTasks();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Vision Track — Sites</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<div class="app-shell">
+  <aside class="rail">
+    <div class="rail-header">
+      <div class="wordmark"><span class="dot"></span> Vision Track</div>
+    </div>
+    <div style="padding: 10px 8px 0;">
+      <a href="dashboard.html" class="rail-item"><span>Dashboard</span></a>
+      <a href="mytasks.html" class="rail-item"><span>My Tasks</span></a>
+      <a href="todo.html" class="rail-item"><span>Daily To-Do</span></a>
+      <a href="projects.html" class="rail-item"><span>Projects</span></a>
+      <a href="trackers.html" class="rail-item"><span>Project Trackers</span></a>
+      <a href="sites.html" class="rail-item active"><span>Sites</span></a>
+      <a href="calendar.html" class="rail-item"><span>Calendar</span></a>
+      <a href="reports.html" class="rail-item"><span>Reports</span></a>
+    </div>
+    <div style="padding: 14px 16px 4px; font-size:12px; color: var(--text-faint);">Workspace</div>
+    <div class="rail-projects" id="project-list"></div>
+    <div style="padding: 10px 16px;">
+      <a href="dashboard.html?new=project" style="display:block;"><button style="width:100%;">+ New project</button></a>
+    </div>
+    <div class="rail-footer">
+      <span id="user-email" style="font-family: var(--mono); font-size:12px; color: var(--text-faint);"></span>
+      <button class="ghost" id="signout-btn">Sign out</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="page-wrap">
+      <div class="page-header">
+        <div>
+          <h1>Sites</h1>
+          <p>Every client site, with contacts on hand.</p>
+        </div>
+        <button class="primary" id="new-site-btn">+ New site</button>
+      </div>
+
+      <table class="data-table">
+        <thead>
+          <tr><th>Site</th><th>Client</th><th>Contact</th><th>Phone</th><th>Address</th></tr>
+        </thead>
+        <tbody id="site-rows"></tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<div class="modal-backdrop hidden" id="site-modal-backdrop">
+  <div class="modal">
+    <h3 id="site-modal-title">New site</h3>
+    <div class="auth-error" id="site-error"></div>
+    <div class="field"><label for="site-name">Site name</label><input id="site-name" type="text" placeholder="e.g. RR Mall" /></div>
+    <div class="field"><label for="site-address">Address</label><textarea id="site-address"></textarea></div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+      <div class="field"><label for="site-client">Client name</label><input id="site-client" type="text" /></div>
+      <div class="field"><label for="site-contact">Contact name</label><input id="site-contact" type="text" /></div>
+    </div>
+    <div class="field"><label for="site-phone">Contact phone</label><input id="site-phone" type="text" /></div>
+    <div class="field"><label for="site-notes">Notes</label><textarea id="site-notes"></textarea></div>
+    <div class="modal-actions">
+      <button class="danger ghost hidden" id="site-delete-btn">Delete</button>
+      <div class="right">
+        <button class="ghost" id="site-cancel-btn">Cancel</button>
+        <button class="primary" id="site-save-btn">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="client.js"></script>
+<script src="shell.js"></script>
+<script>
+(async function () {
+  const user = await window.requireUser();
+  if (!user) return;
+  await initShell(user);
+
+  let sites = [];
+  let editingId = null;
+
+  async function loadSites() {
+    const { data, error } = await window.sb.from("sites").select("*").order("created_at", { ascending: false });
+    if (error) { console.error(error); return; }
+    sites = data || [];
+    render();
+  }
+
+  function render() {
+    const body = document.getElementById("site-rows");
+    body.innerHTML = "";
+    if (!sites.length) {
+      body.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-faint);">No sites logged yet.</td></tr>';
+      return;
+    }
+    sites.forEach((s) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${window.escapeHtmlShared(s.name)}</td>
+        <td>${s.client_name ? window.escapeHtmlShared(s.client_name) : "—"}</td>
+        <td>${s.contact_name ? window.escapeHtmlShared(s.contact_name) : "—"}</td>
+        <td>${s.contact_phone ? window.escapeHtmlShared(s.contact_phone) : "—"}</td>
+        <td>${s.address ? window.escapeHtmlShared(s.address) : "—"}</td>
+      `;
+      tr.addEventListener("click", () => openModal(s.id));
+      body.appendChild(tr);
+    });
+  }
+
+  function openModal(id) {
+    editingId = id;
+    document.getElementById("site-error").style.display = "none";
+    const del = document.getElementById("site-delete-btn");
+    if (id) {
+      const s = sites.find((x) => x.id === id);
+      document.getElementById("site-modal-title").textContent = "Edit site";
+      document.getElementById("site-name").value = s.name;
+      document.getElementById("site-address").value = s.address || "";
+      document.getElementById("site-client").value = s.client_name || "";
+      document.getElementById("site-contact").value = s.contact_name || "";
+      document.getElementById("site-phone").value = s.contact_phone || "";
+      document.getElementById("site-notes").value = s.notes || "";
+      del.classList.remove("hidden");
+    } else {
+      document.getElementById("site-modal-title").textContent = "New site";
+      ["site-name","site-address","site-client","site-contact","site-phone","site-notes"].forEach((id2) => document.getElementById(id2).value = "");
+      del.classList.add("hidden");
+    }
+    document.getElementById("site-modal-backdrop").classList.remove("hidden");
+  }
+  function closeModal() {
+    document.getElementById("site-modal-backdrop").classList.add("hidden");
+  }
+
+  document.getElementById("new-site-btn").addEventListener("click", () => openModal(null));
+  document.getElementById("site-cancel-btn").addEventListener("click", closeModal);
+
+  document.getElementById("site-save-btn").addEventListener("click", async () => {
+    const name = document.getElementById("site-name").value.trim();
+    const errBox = document.getElementById("site-error");
+    if (!name) { errBox.textContent = "Give the site a name."; errBox.style.display = "block"; return; }
+    const payload = {
+      name,
+      address: document.getElementById("site-address").value.trim(),
+      client_name: document.getElementById("site-client").value.trim(),
+      contact_name: document.getElementById("site-contact").value.trim(),
+      contact_phone: document.getElementById("site-phone").value.trim(),
+      notes: document.getElementById("site-notes").value.trim(),
+    };
+    let error;
+    if (editingId) {
+      ({ error } = await window.sb.from("sites").update(payload).eq("id", editingId));
+    } else {
+      ({ error } = await window.sb.from("sites").insert({ ...payload, owner_id: user.id }));
+    }
+    if (error) { errBox.textContent = error.message; errBox.style.display = "block"; return; }
+    closeModal();
+    await loadSites();
+  });
+
+  document.getElementById("site-delete-btn").addEventListener("click", async () => {
+    if (!editingId || !confirm("Delete this site?")) return;
+    await window.sb.from("sites").delete().eq("id", editingId);
+    closeModal();
+    await loadSites();
+  });
+
+  await loadSites();
+})();
+</script>
+</body>
+</html>

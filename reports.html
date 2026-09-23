@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Vision Track — Reports</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<div class="app-shell">
+  <aside class="rail">
+    <div class="rail-header">
+      <div class="wordmark"><span class="dot"></span> Vision Track</div>
+    </div>
+    <div style="padding: 10px 8px 0;">
+      <a href="dashboard.html" class="rail-item"><span>Dashboard</span></a>
+      <a href="mytasks.html" class="rail-item"><span>My Tasks</span></a>
+      <a href="todo.html" class="rail-item"><span>Daily To-Do</span></a>
+      <a href="projects.html" class="rail-item"><span>Projects</span></a>
+      <a href="trackers.html" class="rail-item"><span>Project Trackers</span></a>
+      <a href="sites.html" class="rail-item"><span>Sites</span></a>
+      <a href="calendar.html" class="rail-item"><span>Calendar</span></a>
+      <a href="reports.html" class="rail-item active"><span>Reports</span></a>
+    </div>
+    <div style="padding: 14px 16px 4px; font-size:12px; color: var(--text-faint);">Workspace</div>
+    <div class="rail-projects" id="project-list"></div>
+    <div style="padding: 10px 16px;">
+      <a href="dashboard.html?new=project" style="display:block;"><button style="width:100%;">+ New project</button></a>
+    </div>
+    <div class="rail-footer">
+      <span id="user-email" style="font-family: var(--mono); font-size:12px; color: var(--text-faint);"></span>
+      <button class="ghost" id="signout-btn">Sign out</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="page-wrap">
+      <div class="page-header">
+        <div>
+          <h1>Reports</h1>
+          <p>Progress by project, at a glance.</p>
+        </div>
+      </div>
+
+      <div class="report-table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr><th>Project</th><th>Total</th><th>Backlog</th><th>In progress</th><th>Done</th><th>Overdue</th><th>Completion</th></tr>
+          </thead>
+          <tbody id="report-rows"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="client.js"></script>
+<script src="shell.js"></script>
+<script>
+(async function () {
+  const user = await window.requireUser();
+  if (!user) return;
+  await initShell(user);
+
+  const [{ data: projects, error: pErr }, { data: tasks, error: tErr }] = await Promise.all([
+    window.sb.from("projects").select("*").order("created_at"),
+    window.sb.from("tasks").select("*"),
+  ]);
+  if (pErr) console.error(pErr);
+  if (tErr) console.error(tErr);
+
+  const today = new Date().toISOString().slice(0, 10);
+  const body = document.getElementById("report-rows");
+  body.innerHTML = "";
+
+  if (!projects || !projects.length) {
+    body.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--text-faint);">No projects yet.</td></tr>';
+    return;
+  }
+
+  projects.forEach((p) => {
+    const pt = (tasks || []).filter((t) => t.project_id === p.id);
+    const total = pt.length;
+    const backlog = pt.filter((t) => t.status === "backlog").length;
+    const inProgress = pt.filter((t) => t.status === "in_progress").length;
+    const done = pt.filter((t) => t.status === "done").length;
+    const overdue = pt.filter((t) => t.due_date && t.due_date < today && t.status !== "done").length;
+    const pct = total ? Math.round((done / total) * 100) : 0;
+
+    const tr = document.createElement("tr");
+    tr.style.cursor = "pointer";
+    tr.innerHTML = `
+      <td>${window.escapeHtmlShared(p.name)}</td>
+      <td>${total}</td>
+      <td>${backlog}</td>
+      <td>${inProgress}</td>
+      <td>${done}</td>
+      <td style="${overdue ? "color:var(--danger);" : ""}">${overdue}</td>
+      <td>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <div class="progress-track"><div class="progress-fill" style="width:${pct}%;"></div></div>
+          <span style="font-family:var(--mono); font-size:12px; color:var(--text-dim);">${pct}%</span>
+        </div>
+      </td>
+    `;
+    tr.addEventListener("click", () => { window.location.href = `dashboard.html?project=${p.id}`; });
+    body.appendChild(tr);
+  });
+})();
+</script>
+</body>
+</html>

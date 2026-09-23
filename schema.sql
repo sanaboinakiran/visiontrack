@@ -63,3 +63,53 @@ create index if not exists tasks_project_id_idx on public.tasks(project_id);
 create index if not exists projects_owner_id_idx on public.projects(owner_id);
 create index if not exists updates_task_id_idx on public.updates(task_id);
 create index if not exists updates_project_id_idx on public.updates(project_id);
+
+-- 6. Sites
+create table if not exists public.sites (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references auth.users(id) on delete cascade,
+  name text not null,
+  address text,
+  client_name text,
+  contact_name text,
+  contact_phone text,
+  notes text,
+  created_at timestamptz not null default now()
+);
+
+-- 7. Cameras / project trackers (CCTV installs)
+create table if not exists public.cameras (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references auth.users(id) on delete cascade,
+  site_id uuid references public.sites(id) on delete set null,
+  project_id uuid references public.projects(id) on delete set null,
+  name text not null,
+  location text,
+  ip_address text,
+  status text not null default 'planned' check (status in ('planned','installed','faulty','removed')),
+  installed_date date,
+  notes text,
+  created_at timestamptz not null default now()
+);
+
+-- 8. Daily to-dos (personal checklist, separate from project tasks)
+create table if not exists public.daily_todos (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references auth.users(id) on delete cascade,
+  title text not null,
+  done boolean not null default false,
+  todo_date date not null default current_date,
+  created_at timestamptz not null default now()
+);
+
+alter table public.sites enable row level security;
+alter table public.cameras enable row level security;
+alter table public.daily_todos enable row level security;
+
+create policy "Users manage their own sites" on public.sites for all using (auth.uid() = owner_id) with check (auth.uid() = owner_id);
+create policy "Users manage their own cameras" on public.cameras for all using (auth.uid() = owner_id) with check (auth.uid() = owner_id);
+create policy "Users manage their own todos" on public.daily_todos for all using (auth.uid() = owner_id) with check (auth.uid() = owner_id);
+
+create index if not exists cameras_site_id_idx on public.cameras(site_id);
+create index if not exists cameras_project_id_idx on public.cameras(project_id);
+create index if not exists todos_owner_date_idx on public.daily_todos(owner_id, todo_date);

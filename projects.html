@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Vision Track — Projects</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<div class="app-shell">
+  <aside class="rail">
+    <div class="rail-header">
+      <div class="wordmark"><span class="dot"></span> Vision Track</div>
+    </div>
+    <div style="padding: 10px 8px 0;">
+      <a href="dashboard.html" class="rail-item"><span>Dashboard</span></a>
+      <a href="mytasks.html" class="rail-item"><span>My Tasks</span></a>
+      <a href="todo.html" class="rail-item"><span>Daily To-Do</span></a>
+      <a href="projects.html" class="rail-item active"><span>Projects</span></a>
+      <a href="trackers.html" class="rail-item"><span>Project Trackers</span></a>
+      <a href="sites.html" class="rail-item"><span>Sites</span></a>
+      <a href="calendar.html" class="rail-item"><span>Calendar</span></a>
+      <a href="reports.html" class="rail-item"><span>Reports</span></a>
+    </div>
+    <div style="padding: 14px 16px 4px; font-size:12px; color: var(--text-faint);">Workspace</div>
+    <div class="rail-projects" id="project-list"></div>
+    <div style="padding: 10px 16px;">
+      <a href="dashboard.html?new=project" style="display:block;"><button style="width:100%;">+ New project</button></a>
+    </div>
+    <div class="rail-footer">
+      <span id="user-email" style="font-family: var(--mono); font-size:12px; color: var(--text-faint);"></span>
+      <button class="ghost" id="signout-btn">Sign out</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="page-wrap">
+      <div class="page-header">
+        <div>
+          <h1>Projects</h1>
+          <p>Every project, with a quick read on progress.</p>
+        </div>
+        <a href="dashboard.html?new=project"><button class="primary">+ New project</button></a>
+      </div>
+
+      <div class="stat-grid" id="project-grid" style="grid-template-columns: repeat(3, 1fr);"></div>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="client.js"></script>
+<script src="shell.js"></script>
+<script>
+(async function () {
+  const user = await window.requireUser();
+  if (!user) return;
+  await initShell(user);
+
+  const [{ data: projects, error: pErr }, { data: tasks, error: tErr }] = await Promise.all([
+    window.sb.from("projects").select("*").order("created_at"),
+    window.sb.from("tasks").select("id, project_id, status"),
+  ]);
+  if (pErr) console.error(pErr);
+  if (tErr) console.error(tErr);
+
+  const grid = document.getElementById("project-grid");
+  grid.innerHTML = "";
+
+  if (!projects || !projects.length) {
+    grid.style.gridTemplateColumns = "1fr";
+    grid.innerHTML = '<div class="empty-state">No projects yet. Create one to get started.</div>';
+    return;
+  }
+
+  projects.forEach((p) => {
+    const projTasks = (tasks || []).filter((t) => t.project_id === p.id);
+    const done = projTasks.filter((t) => t.status === "done").length;
+    const total = projTasks.length;
+    const card = document.createElement("div");
+    card.className = "stat-card";
+    card.style.cursor = "pointer";
+    card.innerHTML = `
+      <span>${window.escapeHtmlShared(p.name)} · <span class="status-tag ${p.status}">${p.status.replace("_", " ")}</span></span>
+      <div class="stat-value">${done}/${total}</div>
+      <span style="font-size:12px; color: var(--text-faint);">tasks done</span>
+    `;
+    card.addEventListener("click", () => {
+      window.location.href = `dashboard.html?project=${p.id}`;
+    });
+    grid.appendChild(card);
+  });
+})();
+</script>
+</body>
+</html>

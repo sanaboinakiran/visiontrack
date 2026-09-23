@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Vision Track — Calendar</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<div class="app-shell">
+  <aside class="rail">
+    <div class="rail-header">
+      <div class="wordmark"><span class="dot"></span> Vision Track</div>
+    </div>
+    <div style="padding: 10px 8px 0;">
+      <a href="dashboard.html" class="rail-item"><span>Dashboard</span></a>
+      <a href="mytasks.html" class="rail-item"><span>My Tasks</span></a>
+      <a href="todo.html" class="rail-item"><span>Daily To-Do</span></a>
+      <a href="projects.html" class="rail-item"><span>Projects</span></a>
+      <a href="trackers.html" class="rail-item"><span>Project Trackers</span></a>
+      <a href="sites.html" class="rail-item"><span>Sites</span></a>
+      <a href="calendar.html" class="rail-item active"><span>Calendar</span></a>
+      <a href="reports.html" class="rail-item"><span>Reports</span></a>
+    </div>
+    <div style="padding: 14px 16px 4px; font-size:12px; color: var(--text-faint);">Workspace</div>
+    <div class="rail-projects" id="project-list"></div>
+    <div style="padding: 10px 16px;">
+      <a href="dashboard.html?new=project" style="display:block;"><button style="width:100%;">+ New project</button></a>
+    </div>
+    <div class="rail-footer">
+      <span id="user-email" style="font-family: var(--mono); font-size:12px; color: var(--text-faint);"></span>
+      <button class="ghost" id="signout-btn">Sign out</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="page-wrap">
+      <div class="page-header">
+        <div>
+          <h1>Calendar</h1>
+          <p>Task due dates across every project.</p>
+        </div>
+      </div>
+
+      <div class="cal-nav">
+        <button id="prev-month">← Prev</button>
+        <h2 id="month-label"></h2>
+        <button id="next-month">Next →</button>
+        <button class="ghost" id="today-month-btn">This month</button>
+      </div>
+
+      <div class="cal-grid" id="cal-grid"></div>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="client.js"></script>
+<script src="shell.js"></script>
+<script>
+(async function () {
+  const user = await window.requireUser();
+  if (!user) return;
+  await initShell(user);
+
+  let viewDate = new Date();
+  let allTasks = [];
+
+  const { data, error } = await window.sb
+    .from("tasks")
+    .select("id, title, due_date, status, project_id")
+    .not("due_date", "is", null);
+  if (error) console.error(error);
+  allTasks = data || [];
+
+  function dateKey(y, m, d) {
+    return `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  }
+
+  function render() {
+    const y = viewDate.getFullYear();
+    const m = viewDate.getMonth();
+    document.getElementById("month-label").textContent = viewDate.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+
+    const grid = document.getElementById("cal-grid");
+    grid.innerHTML = "";
+    ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].forEach((d) => {
+      const el = document.createElement("div");
+      el.className = "cal-dow";
+      el.textContent = d;
+      grid.appendChild(el);
+    });
+
+    const firstOfMonth = new Date(y, m, 1);
+    const startOffset = firstOfMonth.getDay();
+    const gridStart = new Date(y, m, 1 - startOffset);
+    const today = new Date().toISOString().slice(0, 10);
+
+    for (let i = 0; i < 42; i++) {
+      const cellDate = new Date(gridStart);
+      cellDate.setDate(gridStart.getDate() + i);
+      const key = dateKey(cellDate.getFullYear(), cellDate.getMonth(), cellDate.getDate());
+      const isOtherMonth = cellDate.getMonth() !== m;
+      const isToday = key === today;
+
+      const cell = document.createElement("div");
+      cell.className = "cal-cell" + (isOtherMonth ? " other-month" : "") + (isToday ? " today" : "");
+      const dayNum = document.createElement("div");
+      dayNum.className = "daynum";
+      dayNum.textContent = cellDate.getDate();
+      cell.appendChild(dayNum);
+
+      allTasks.filter((t) => t.due_date === key).forEach((t) => {
+        const pill = document.createElement("div");
+        const isOverdue = t.due_date < today && t.status !== "done";
+        pill.className = "cal-task-pill" + (isOverdue ? " overdue" : "");
+        pill.textContent = t.title;
+        pill.addEventListener("click", () => {
+          window.location.href = `dashboard.html?project=${t.project_id}&task=${t.id}`;
+        });
+        cell.appendChild(pill);
+      });
+
+      grid.appendChild(cell);
+    }
+  }
+
+  document.getElementById("prev-month").addEventListener("click", () => {
+    viewDate.setMonth(viewDate.getMonth() - 1);
+    render();
+  });
+  document.getElementById("next-month").addEventListener("click", () => {
+    viewDate.setMonth(viewDate.getMonth() + 1);
+    render();
+  });
+  document.getElementById("today-month-btn").addEventListener("click", () => {
+    viewDate = new Date();
+    render();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
