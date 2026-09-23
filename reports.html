@@ -6,6 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="icon" href="assets/favicon.png" />
 <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -13,7 +14,7 @@
 <div class="app-shell">
   <aside class="rail">
     <div class="rail-header">
-      <div class="wordmark"><span class="dot"></span> Vision Track</div>
+      <div class="wordmark"><img src="assets/logo-icon.png" alt="Vision Track logo" class="logo-icon" /> Vision Track</div>
     </div>
     <div style="padding: 10px 8px 0;">
       <a href="dashboard.html" class="rail-item"><span>Dashboard</span></a>
@@ -46,12 +47,19 @@
       </div>
 
       <div class="report-table-wrap">
+        <h3 style="font-size:14px; color:var(--text-dim); margin:0 0 10px;">Overview</h3>
         <table class="data-table">
           <thead>
             <tr><th>Project</th><th>Total</th><th>Backlog</th><th>In progress</th><th>Done</th><th>Overdue</th><th>Completion</th></tr>
           </thead>
           <tbody id="report-rows"></tbody>
         </table>
+      </div>
+
+      <div>
+        <h3 style="font-size:14px; color:var(--text-dim); margin:0 0 10px;">Detailed audit trail</h3>
+        <p style="font-size:13px; color:var(--text-faint); margin:0 0 14px;">Every project, its tasks, due dates, delays, and the daily updates logged against each.</p>
+        <div id="audit-trail" style="display:flex; flex-direction:column; gap:10px;"></div>
       </div>
     </div>
   </main>
@@ -67,20 +75,38 @@
   if (!user) return;
   await initShell(user);
 
-  const [{ data: projects, error: pErr }, { data: tasks, error: tErr }] = await Promise.all([
+  const [{ data: projects, error: pErr }, { data: tasks, error: tErr }, { data: updates, error: uErr }] = await Promise.all([
     window.sb.from("projects").select("*").order("created_at"),
-    window.sb.from("tasks").select("*"),
+    window.sb.from("tasks").select("*").order("created_at"),
+    window.sb.from("updates").select("*").order("created_at", { ascending: false }),
   ]);
   if (pErr) console.error(pErr);
   if (tErr) console.error(tErr);
+  if (uErr) console.error(uErr);
 
   const today = new Date().toISOString().slice(0, 10);
   const body = document.getElementById("report-rows");
+  const auditEl = document.getElementById("audit-trail");
   body.innerHTML = "";
+  auditEl.innerHTML = "";
 
   if (!projects || !projects.length) {
     body.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--text-faint);">No projects yet.</td></tr>';
+    auditEl.innerHTML = '<div class="empty-state">No projects yet.</div>';
     return;
+  }
+
+  function delayInfo(t) {
+    if (!t.due_date) return "No due date";
+    const due = new Date(t.due_date);
+    if (t.status === "done") {
+      if (!t.completed_at) return "Done";
+      const completedDate = new Date(t.completed_at.slice(0, 10));
+      const diffDays = Math.round((completedDate - due) / 86400000);
+      return diffDays > 0 ? `⚠ Completed ${diffDays}d late` : "On time";
+    }
+    const diffDays = Math.round((new Date(today) - due) / 86400000);
+    return diffDays > 0 ? `⚠ ${diffDays}d overdue` : "On track";
   }
 
   projects.forEach((p) => {
@@ -92,6 +118,7 @@
     const overdue = pt.filter((t) => t.due_date && t.due_date < today && t.status !== "done").length;
     const pct = total ? Math.round((done / total) * 100) : 0;
 
+    // Overview row
     const tr = document.createElement("tr");
     tr.style.cursor = "pointer";
     tr.innerHTML = `
@@ -110,6 +137,57 @@
     `;
     tr.addEventListener("click", () => { window.location.href = `dashboard.html?project=${p.id}`; });
     body.appendChild(tr);
+
+    // Audit trail entry
+    const projectUpdates = (updates || []).filter((u) => u.project_id === p.id);
+    const createdDate = new Date(p.created_at).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+
+    const details = document.createElement("details");
+    details.className = "audit-project";
+    const tasksHtml = pt.length
+      ? pt.map((t) => {
+          const taskUpdates = (updates || []).filter((u) => u.task_id === t.id);
+          const delay = delayInfo(t);
+          const isFlagged = delay.startsWith("⚠");
+          return `
+            <div class="audit-task">
+              <div class="head">
+                <span class="title">${window.escapeHtmlShared(t.title)}</span>
+                <span class="right">
+                  <span class="priority-pill ${t.priority}">${t.priority}</span>
+                  <span>${t.status.replace("_", " ")}</span>
+                  <span>${t.due_date ? "Due " + t.due_date : "No due date"}</span>
+                  <span class="${isFlagged ? "delay-flag" : ""}">${delay}</span>
+                </span>
+              </div>
+              ${taskUpdates.length ? `
+                <div class="updates">
+                  ${taskUpdates.map((u) => `<div class="u"><span class="when">${new Date(u.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>${window.escapeHtmlShared(u.note)}</div>`).join("")}
+                </div>
+              ` : ""}
+            </div>
+          `;
+        }).join("")
+      : '<div style="color:var(--text-faint); font-size:13px; padding:10px 0;">No tasks added yet.</div>';
+
+    const projectUpdatesHtml = projectUpdates.length
+      ? `<div class="audit-project-updates">
+          <div class="label">Project-level updates</div>
+          ${projectUpdates.map((u) => `<div class="u"><span class="when">${new Date(u.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>${window.escapeHtmlShared(u.note)}</div>`).join("")}
+        </div>`
+      : "";
+
+    details.innerHTML = `
+      <summary>
+        <span>${window.escapeHtmlShared(p.name)}</span>
+        <span class="meta">created ${createdDate} · ${p.status.replace("_", " ")} · ${total} task${total === 1 ? "" : "s"}</span>
+      </summary>
+      <div class="body">
+        ${tasksHtml}
+        ${projectUpdatesHtml}
+      </div>
+    `;
+    auditEl.appendChild(details);
   });
 })();
 </script>
