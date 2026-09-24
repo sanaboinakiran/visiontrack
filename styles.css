@@ -16,6 +16,21 @@
   --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
+:root[data-theme="light"] {
+  --bg: #f6f8f9;
+  --panel: #ffffff;
+  --panel-raised: #eef1f2;
+  --hairline: #dde3e6;
+  --text: #1b2226;
+  --text-dim: #5b666c;
+  --text-faint: #8b979d;
+  --accent: #0e8e82;
+  --accent-dim: #bfe9e4;
+  --success: #2f9e52;
+  --warning: #a86a00;
+  --danger: #c1392b;
+}
+
 * { box-sizing: border-box; }
 
 html, body {

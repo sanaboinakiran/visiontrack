@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
+<script src="theme.js"></script>
 <meta charset="utf-8" />
 <title>Vision Track</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -13,7 +14,10 @@
 
 <div class="auth-wrap">
   <div class="auth-context">
-    <div class="wordmark"><img src="assets/logo-icon.png" alt="Vision Track logo" class="logo-icon" /> Vision Track</div>
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <div class="wordmark"><img src="assets/logo-icon.png" alt="Vision Track logo" class="logo-icon" /> Vision Track</div>
+      <button class="ghost" id="theme-toggle-btn" title="Toggle theme">🌙</button>
+    </div>
 
     <div>
       <h1 id="auth-headline">Track the work. See the whole operation.</h1>

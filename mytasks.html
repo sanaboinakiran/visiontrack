@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
+<script src="theme.js"></script>
 <meta charset="utf-8" />
 <title>Vision Track — My Tasks</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -33,6 +34,7 @@
     </div>
     <div class="rail-footer">
       <span id="user-email" style="font-family: var(--mono); font-size:12px; color: var(--text-faint);"></span>
+      <button class="ghost" id="theme-toggle-btn" title="Toggle theme">🌙</button>
       <button class="ghost" id="signout-btn">Sign out</button>
     </div>
   </aside>
@@ -44,7 +46,7 @@
           <h1>My Tasks</h1>
           <p>Every task across every project, searchable and filterable.</p>
         </div>
-        <a href="dashboard.html"><button class="primary">+ New task</button></a>
+        <button class="primary" id="new-task-open-btn">+ New task</button>
       </div>
 
       <div class="filters-row">
@@ -68,6 +70,42 @@
   </main>
 </div>
 
+<div class="modal-backdrop hidden" id="task-modal-backdrop">
+  <div class="modal">
+    <h3>New task</h3>
+    <div class="auth-error" id="task-error"></div>
+    <div class="field">
+      <label for="qt-project">Project</label>
+      <select id="qt-project"></select>
+    </div>
+    <div class="field">
+      <label for="qt-title">Title</label>
+      <input id="qt-title" type="text" placeholder="e.g. Migrate DNS records" />
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+      <div class="field">
+        <label for="qt-priority">Priority</label>
+        <select id="qt-priority">
+          <option value="low">Low</option>
+          <option value="medium" selected>Medium</option>
+          <option value="high">High</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="qt-due">Due date (optional)</label>
+        <input id="qt-due" type="date" />
+      </div>
+    </div>
+    <div class="modal-actions">
+      <div></div>
+      <div class="right">
+        <button class="ghost" id="task-cancel-btn">Cancel</button>
+        <button class="primary" id="task-save-btn">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <script src="client.js"></script>
@@ -79,6 +117,51 @@
   await initShell(user);
 
   let allTasks = [];
+  let projectOptions = [];
+
+  async function loadProjectOptions() {
+    const { data, error } = await window.sb.from("projects").select("id, name").order("name");
+    if (error) { console.error(error); return; }
+    projectOptions = data || [];
+    const sel = document.getElementById("qt-project");
+    sel.innerHTML = projectOptions.length
+      ? projectOptions.map((p) => `<option value="${p.id}">${window.escapeHtmlShared(p.name)}</option>`).join("")
+      : '<option value="">No projects yet</option>';
+  }
+
+  function openTaskModal() {
+    document.getElementById("task-error").style.display = "none";
+    document.getElementById("qt-title").value = "";
+    document.getElementById("qt-priority").value = "medium";
+    document.getElementById("qt-due").value = "";
+    document.getElementById("task-modal-backdrop").classList.remove("hidden");
+  }
+  function closeTaskModal() {
+    document.getElementById("task-modal-backdrop").classList.add("hidden");
+  }
+
+  document.getElementById("new-task-open-btn").addEventListener("click", openTaskModal);
+  document.getElementById("task-cancel-btn").addEventListener("click", closeTaskModal);
+
+  document.getElementById("task-save-btn").addEventListener("click", async () => {
+    const project_id = document.getElementById("qt-project").value;
+    const title = document.getElementById("qt-title").value.trim();
+    const priority = document.getElementById("qt-priority").value;
+    const due_date = document.getElementById("qt-due").value || null;
+    const errBox = document.getElementById("task-error");
+
+    if (!project_id) { errBox.textContent = "Create a project first — tasks need to belong to one."; errBox.style.display = "block"; return; }
+    if (!title) { errBox.textContent = "Give the task a title."; errBox.style.display = "block"; return; }
+
+    const { error } = await window.sb.from("tasks").insert({
+      project_id, title, priority, due_date,
+      status: "backlog",
+      owner_id: user.id,
+    });
+    if (error) { errBox.textContent = error.message; errBox.style.display = "block"; return; }
+    closeTaskModal();
+    await loadTasks();
+  });
 
   async function loadTasks() {
     const { data, error } = await window.sb
@@ -152,6 +235,7 @@
   document.getElementById("status-filter").addEventListener("change", render);
   document.getElementById("priority-filter").addEventListener("change", render);
 
+  await loadProjectOptions();
   await loadTasks();
 })();
 </script>
