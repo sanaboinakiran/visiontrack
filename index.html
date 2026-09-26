@@ -194,6 +194,7 @@ label {
   flex: 1;
   overflow-y: auto;
   padding: 10px 8px;
+  min-height: 0;
 }
 .rail-item {
   display: flex;
@@ -218,6 +219,51 @@ label {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
+}
+.profile-mini {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  color: inherit;
+  flex: 1;
+  min-width: 0;
+}
+.profile-mini:hover { background: var(--panel-raised); }
+.profile-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--accent-dim);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.profile-mini-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+.profile-mini-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.profile-mini-email {
+  font-size: 11px;
+  color: var(--text-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .main {
@@ -363,33 +409,21 @@ label {
 
 
 /* ── Vision Track Lite navigation refresh ───────────────────────── */
-:root { 
-  --bg: #f5f8fa;
-  --panel: #ffffff;
-  --panel-raised: #eef5f7;
-  --hairline: #dbe5e9;
-  --text: #142127;
-  --text-dim: #52636b;
-  --text-faint: #87979f;
-  --accent: #087fce;
-  --accent-dim: #d9effc;
-  --success: #269653;
-  --warning: #a96d00;
-  --danger: #c63d31;
-}
+/* (color variables removed here — they were unconditionally overriding
+   the dark/light theme toggle. Structural layout rules kept below.) */
 html, body { background: var(--bg); }
 body { overflow: hidden; }
 .app-shell { grid-template-columns: 236px 1fr; }
-.rail { background: #fff; }
+.rail { background: var(--panel); }
 .rail-header { padding: 15px 16px 13px; }
-.wordmark { color: #0d2940; }
+.wordmark { color: var(--text); }
 .primary-nav { padding: 10px 10px 4px; }
 .nav-section-label, .workspace-label {
   padding: 11px 8px 6px;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: .12em;
-  color: #8a9aa2;
+  color: var(--text-faint);
 }
 .nav-grid { display: grid; gap: 2px; }
 .primary-nav .rail-item {
@@ -401,20 +435,20 @@ body { overflow: hidden; }
   margin: 0;
   min-height: 36px;
   border: 1px solid transparent;
-  color: #53656d;
+  color: var(--text-dim);
 }
-.primary-nav .rail-item:hover { background: #f1f7fa; border-color: #e1ebef; }
-.primary-nav .rail-item.active { background: #e5f4fb; color: #075f99; border-color: #cde9f7; font-weight: 600; }
-.primary-nav .nav-icon { width: 20px; text-align: center; font-size: 15px; color: #2187c4; }
-.primary-nav .nav-key { font: 10px var(--mono); color: #a0adb3; }
+.primary-nav .rail-item:hover { background: var(--panel-raised); border-color: var(--hairline); }
+.primary-nav .rail-item.active { background: var(--accent-dim); color: var(--accent); border-color: var(--accent-dim); font-weight: 600; }
+.primary-nav .nav-icon { width: 20px; text-align: center; font-size: 15px; color: var(--accent); display: flex; align-items: center; justify-content: center; line-height: 1; }
+.primary-nav .nav-key { font: 10px var(--mono); color: var(--text-faint); }
 .workspace-label { border-top: 1px solid var(--hairline); margin-top: 5px; padding-top: 14px; }
 .rail-projects { padding: 4px 10px 10px; }
 .rail-projects .rail-item { padding: 7px 9px; font-size: 13px; }
-.rail-footer { background: #fbfdfe; }
+.rail-footer { background: var(--panel); }
 .main { background: var(--bg); }
-.topbar, .page-header { background: rgba(255,255,255,.86); }
+/* topbar/page-header: no forced background — inherits theme */
 .page-wrap { max-width: 1440px; }
-button.primary { background: #087fce; border-color: #087fce; color: #fff; }
+/* button.primary: reverted to theme-aware base rule above */
 button.primary:hover { filter: brightness(1.04); }
 .stat-card, .chart-panel, .report-table-wrap, .task-row, .data-table, .audit-project { box-shadow: 0 1px 2px rgba(15,35,45,.04); }
 /* Compact navigation on smaller screens */
